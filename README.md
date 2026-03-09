@@ -1,62 +1,65 @@
-# ✈️ Orizon – API RESTful per la gestione di paesi e viaggi
+# ✈️ Orizon – RESTful API for managing countries and trips
 
-## 📖 Descrizione
+## 📖 Description
 
-Orizon è un'API per gestire il catalogo di un'agenzia di viaggi. L'applicazione permette di:
+Orizon is an API for managing the catalogue of a travel agency. The application allows you to:
 
-- Gestire paesi (CRUD completo)
-- Gestire viaggi (CRUD completo)
-- Associare uno o più paesi a ogni viaggio
-- Filtrare i viaggi per paese
-- Filtrare i viaggi per numero di posti disponibili
+- Manage countries (full CRUD)
+- Manage trips (full CRUD)
+- Associate one or more countries to each trip
+- Filter trips by country
+- Filter trips by number of available seats
 
 ---
 
-## 🛠️ tecnologie utilizzate
+## 🛠️ Technologies used
 
-- PHP (procedurale, senza framework)
+- PHP (procedural, no framework)
 - MySQL
-- PDO per la connessione al database e la protezione dalle SQL injection
+- PDO for database connection and SQL injection protection
 
 ---
 
-## 📁 struttura del progetto
+## 📁 Project structure
 
 ```
 orizon/
 ├── config/
-│   └── database.php      → connessione al database
+│   └── database.php          → database connection
 ├── db/
-│   └── helpers.php       → funzioni di supporto (risposta JSON, lettura input)
+│   └── helpers.php           → utility functions (JSON response, input reading)
+├── controllers/
+│   ├── CountryController.php → CRUD logic for countries
+│   └── TripController.php    → CRUD logic for trips and filters
 ├── routes/
-│   ├── paesi.php         → operazioni CRUD sui paesi
-│   └── viaggi.php        → operazioni CRUD sui viaggi e filtri
-├── .env                  → credenziali del database (escluso da GitHub)
-├── .env.example          → modello del file .env da condividere
-├── .gitignore            → file e cartelle esclusi da GitHub
-├── .htaccess             → riscrittura URL per Apache
-├── index.php             → punto di ingresso, router principale
-└── migrations.sql        → script SQL per creare il database da zero
+│   ├── countries.php         → URL mapping for /countries
+│   └── trips.php             → URL mapping for /trips
+├── .env                      → database credentials (excluded from GitHub)
+├── .env.example              → template for the .env file to share
+├── .gitignore                → files and folders excluded from GitHub
+├── .htaccess                 → URL rewriting for Apache
+├── index.php                 → entry point, main router
+└── migrations.sql            → SQL script to create the database from scratch
 ```
 
 ---
 
-## ⚙️ setup
+## ⚙️ Setup
 
-### 1. crea il database
+### 1. Create the database
 
-esegui il file `migrations.sql` nel tuo client MySQL preferito.
-lo script crea il database `orizon` e le tabelle `paesi`, `viaggi`, `viaggi_paesi`.
+Run the `migrations.sql` file in your preferred MySQL client.
+The script creates the `orizon` database and the `countries`, `trips`, `trip_countries` tables.
 
-### 2. configura le variabili d'ambiente
+### 2. Configure environment variables
 
-copia il file `.env.example` e rinominalo in `.env`:
+Copy the `.env.example` file and rename it to `.env`:
 
 ```
 cp .env.example .env
 ```
 
-apri `.env` e inserisci le tue credenziali:
+Open `.env` and enter your credentials:
 
 ```
 DB_HOST=localhost
@@ -65,124 +68,124 @@ DB_PASS=
 DB_NAME=orizon
 ```
 
-### 3. avvia il server
+### 3. Start the server
 
-**con XAMPP:** copia la cartella `orizon/` dentro `htdocs/` e avvia Apache e MySQL.
+**With XAMPP:** copy the `orizon/` folder inside `htdocs/` and start Apache and MySQL.
 
-**con il server built-in di PHP:** lancia da terminale nella cartella del progetto:
+**With PHP's built-in server:** run from the terminal inside the project folder:
 
 ```
 php -S localhost:8000
 ```
 
-in questo caso il base URL sarà `http://localhost:8000`.
+In this case the base URL will be `http://localhost:8000`.
 
 ---
 
-## 🎯 rotte disponibili
+## 🎯 Available routes
 
-### 🗺️ paesi
+### 🗺️ Countries
 
-| metodo | URL         | descrizione               |
-| ------ | ----------- | ------------------------- |
-| GET    | /paesi      | restituisce tutti i paesi |
-| POST   | /paesi      | crea un nuovo paese       |
-| PUT    | /paesi/{id} | modifica un paese         |
-| DELETE | /paesi/{id} | elimina un paese          |
+| Method | URL              | Description              |
+| ------ | ---------------- | ------------------------ |
+| GET    | /countries       | returns all countries    |
+| POST   | /countries       | creates a new country    |
+| PUT    | /countries/{id}  | updates a country        |
+| DELETE | /countries/{id}  | deletes a country        |
 
-**body per POST e PUT:**
+**Body for POST and PUT:**
 
 ```json
 {
-  "nome": "Italia"
+  "name": "Italy"
 }
 ```
 
 ---
 
-### 🧳 viaggi
+### 🧳 Trips
 
-| metodo | URL            | descrizione                   |
-| ------ | -------------- | ----------------------------- |
-| GET    | /viaggi        | restituisce tutti i viaggi    |
-| GET    | /viaggi?filtri | restituisce i viaggi filtrati |
-| POST   | /viaggi        | crea un nuovo viaggio         |
-| PUT    | /viaggi/{id}   | modifica un viaggio           |
-| DELETE | /viaggi/{id}   | elimina un viaggio            |
+| Method | URL             | Description                  |
+| ------ | --------------- | ---------------------------- |
+| GET    | /trips          | returns all trips            |
+| GET    | /trips?filters  | returns filtered trips       |
+| POST   | /trips          | creates a new trip           |
+| PUT    | /trips/{id}     | updates a trip               |
+| DELETE | /trips/{id}     | deletes a trip               |
 
-**filtri disponibili (query string):**
+**Available filters (query string):**
 
-| parametro | esempio      | descrizione                              |
-| --------- | ------------ | ---------------------------------------- |
-| paese_id  | ?paese_id=2  | filtra i viaggi che includono quel paese |
-| posti_min | ?posti_min=5 | filtra i viaggi con almeno N posti       |
+| Parameter  | Example           | Description                               |
+| ---------- | ----------------- | ----------------------------------------- |
+| country_id | ?country_id=2     | filters trips that include that country   |
+| min_seats  | ?min_seats=5      | filters trips with at least N seats       |
 
-i filtri si possono combinare: `?paese_id=2&posti_min=5`
+Filters can be combined: `?country_id=2&min_seats=5`
 
-**body per POST:**
-
-```json
-{
-  "titolo": "Safari in Kenya",
-  "posti": 12,
-  "paesi_ids": [1, 2]
-}
-```
-
-**body per PUT:**
+**Body for POST:**
 
 ```json
 {
-  "titolo": "Safari in Kenya",
-  "posti": 8,
-  "paesi_ids": [1]
+  "title": "Safari in Kenya",
+  "seats": 12,
+  "country_ids": [1, 2]
 }
 ```
 
-nota: `paesi_ids` deve contenere id di paesi già esistenti nel database.
-se viene omesso nella PUT, i paesi associati al viaggio rimangono invariati.
+**Body for PUT:**
+
+```json
+{
+  "title": "Safari in Kenya",
+  "seats": 8,
+  "country_ids": [1]
+}
+```
+
+Note: `country_ids` must contain ids of countries that already exist in the database.
+If omitted in a PUT request, the countries associated with the trip remain unchanged.
 
 ---
 
-## 📝 esempi di risposta
+## 📝 Response examples
 
-**GET /paesi**
+**GET /countries**
 
 ```json
 [
-  { "id": 1, "nome": "Italia" },
-  { "id": 2, "nome": "Francia" }
+  { "id": 1, "name": "Italy" },
+  { "id": 2, "name": "France" }
 ]
 ```
 
-**GET /viaggi**
+**GET /trips**
 
 ```json
 [
   {
     "id": 1,
-    "titolo": "Tour della Provenza",
-    "posti": 10,
-    "paesi": [{ "id": 2, "nome": "Francia" }]
+    "title": "Provence Tour",
+    "seats": 10,
+    "countries": [{ "id": 2, "name": "France" }]
   }
 ]
 ```
 
 ---
 
-## 📚 status code utilizzati
+## 📚 HTTP status codes used
 
-| codice | significato                                       |
-| ------ | ------------------------------------------------- |
-| 200    | OK – richiesta riuscita                           |
-| 201    | Created – risorsa creata con successo             |
-| 404    | Not Found – risorsa non trovata                   |
-| 422    | Unprocessable Entity – dati mancanti o non validi |
-| 500    | Internal Server Error – errore del server         |
+| Code | Meaning                                           |
+| ---- | ------------------------------------------------- |
+| 200  | OK – request succeeded                            |
+| 201  | Created – resource successfully created           |
+| 404  | Not Found – resource not found                    |
+| 422  | Unprocessable Entity – missing or invalid data    |
+| 500  | Internal Server Error – server-side error         |
 
 ---
 
-## 📬 Contatti
+## 📬 Contacts
 
 - **GitHub:**  
   https://github.com/p4wlee
@@ -192,6 +195,6 @@ se viene omesso nella PUT, i paesi associati al viaggio rimangono invariati.
 
 ---
 
-## 📄 Licenza
+## 📄 License
 
-Questo progetto è open source e disponibile sotto licenza **MIT**.
+This project is open source and available under the **MIT** license.
