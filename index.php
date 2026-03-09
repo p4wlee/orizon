@@ -1,146 +1,120 @@
 <?php
 /*
-    questo è il punto di ingresso dell'intera API.
-    ogni richiesta HTTP che arriva al server passa da qui.
+    this is the entry point of the entire API.
+    every HTTP request that reaches the server passes through here.
 
-    il suo compito è leggere:
-    1) l'URL della richiesta (es: /paesi, /viaggi/3)
-    2) il metodo HTTP (GET, POST, PUT, DELETE)
+    its job is to read:
+    1) the URL of the request (e.g. /countries, /trips/3)
+    2) the HTTP method (GET, POST, PUT, DELETE)
 
-    e in base a questi due elementi, chiamare la funzione giusta.
+    and based on these two elements, require the correct route file.
 */
 
 header('Content-Type: application/json');
 
 /*
-    "require_once" include un file PHP e lo esegue.
-    se il file non esiste, PHP si ferma con un errore fatale.
-    uso "require_once" (e non solo "require") per evitare di includere
-    lo stesso file più volte per errore.
+    "require_once" includes a PHP file and executes it.
+    if the file does not exist, PHP stops with a fatal error.
+    i use "require_once" (and not just "require") to avoid including
+    the same file more than once by mistake.
 
-    "__DIR__" è una costante PHP che contiene il percorso
-    assoluto della cartella in cui si trova il file corrente.
-    uso __DIR__ per costruire percorsi stabili che funzionano
-    indipendentemente da dove viene eseguito PHP.
+    "__DIR__" is a PHP constant that contains the absolute path
+    of the folder where the current file is located.
+    i use __DIR__ to build stable paths that work
+    regardless of where PHP is executed from.
 
-    ordine di inclusione:
-    prima il database e gli helper (perché le funzioni nelle rotte li usano),
-    poi i file delle rotte.
+    inclusion order:
+    first the database and helpers (because the controllers use them),
+    then the controller files,
+    then the route files.
 */
 require_once __DIR__ . '/config/database.php';
 require_once __DIR__ . '/db/helpers.php';
-require_once __DIR__ . '/routes/paesi.php';
-require_once __DIR__ . '/routes/viaggi.php';
+require_once __DIR__ . '/controllers/CountryController.php';
+require_once __DIR__ . '/controllers/TripController.php';
 
 /*
-    apro la connessione al database chiamando la funzione definita
+    i open the database connection by calling the function defined
     in config/database.php.
-    da questo momento "$pdo" contiene la connessione aperta,
-    pronta per essere usata nelle query.
+    from this point on, "$pdo" holds the open connection,
+    ready to be used in queries.
 */
 $pdo = getConnection();
 
 /*
-    "$_SERVER" è un array superglobale PHP: è disponibile automaticamente
-    in tutto il codice senza bisogno di passarlo come parametro.
-    contiene informazioni sulla richiesta HTTP ricevuta dal server.
+    "$_SERVER" is a PHP superglobal array: it is automatically available
+    throughout all code without needing to be passed as a parameter.
+    it contains information about the HTTP request received by the server.
 
-    REQUEST_METHOD contiene il metodo HTTP: "GET", "POST", "PUT" o "DELETE".
+    REQUEST_METHOD contains the HTTP method: "GET", "POST", "PUT" or "DELETE".
 */
-$metodo = $_SERVER['REQUEST_METHOD'];
+$method = $_SERVER['REQUEST_METHOD'];
 
 /*
-    costruisco il percorso pulito dell'URL.
+    i build the clean URL path.
 
-    "$_SERVER['REQUEST_URI']" contiene l'URL completo inclusa la query string.
-    esempio: "/orizon/paesi/3?foo=bar"
+    "$_SERVER['REQUEST_URI']" contains the full URL including the query string.
+    example: "/orizon/countries/3?foo=bar"
 
-    "parse_url(..., PHP_URL_PATH)" estrae solo il percorso, senza query string.
-    risultato: "/orizon/paesi/3"
+    "parse_url(..., PHP_URL_PATH)" extracts only the path, without the query string.
+    result: "/orizon/countries/3"
 
-    "dirname($_SERVER['SCRIPT_NAME'])" restituisce la cartella di index.php.
+    "dirname($_SERVER['SCRIPT_NAME'])" returns the folder of index.php.
 
-    "str_replace($radice, '', $percorso)" rimuove la parte iniziale dell'URL
-    che corrisponde alla cartella del progetto.
-    risultato finale: "/paesi/3"
+    "str_replace($base, '', $path)" removes the initial part of the URL
+    that corresponds to the project folder.
+    final result: "/countries/3"
 
-    questo passaggio è necessario perché in XAMPP l'URL include il nome
-    della cartella del progetto (/orizon/paesi invece di solo /paesi),
-    e io voglio lavorare solo con la parte "pura" dell'API.
+    this step is necessary because in XAMPP the URL includes the project folder name
+    (/orizon/countries instead of just /countries),
+    and i want to work only with the "pure" API path.
 */
-$percorso = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
-$radice   = rtrim(dirname($_SERVER['SCRIPT_NAME']), '/');
-$percorso = str_replace($radice, '', $percorso);
+$path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+$base = rtrim(dirname($_SERVER['SCRIPT_NAME']), '/');
+$path = str_replace($base, '', $path);
 
 /*
-    divido il percorso nelle sue parti usando "/" come separatore.
+    i split the path into its parts using "/" as separator.
 
-    "explode('/', '/paesi/3')" produce: ['', 'paesi', '3']
-    il primo elemento è vuoto perché il percorso inizia con "/".
+    "explode('/', '/countries/3')" produces: ['', 'countries', '3']
+    the first element is empty because the path starts with "/".
 
-    "array_filter()" rimuove gli elementi vuoti dall'array.
-    "array_values()" re-indicizza l'array da 0 dopo il filtro.
+    "array_filter()" removes empty elements from the array.
+    "array_values()" re-indexes the array from 0 after the filter.
 
-    risultato finale:
-        "/paesi"    → ['paesi']
-        "/paesi/3"  → ['paesi', '3']
-        "/viaggi"   → ['viaggi']
-        "/viaggi/5" → ['viaggi', '5']
+    final result:
+        "/countries"    → ['countries']
+        "/countries/3"  → ['countries', '3']
+        "/trips"        → ['trips']
+        "/trips/5"      → ['trips', '5']
 */
-$parti = array_values(array_filter(explode('/', $percorso)));
+$parts = array_values(array_filter(explode('/', $path)));
 
 /*
-    estraggo la risorsa e l'id.
+    i extract the resource name and the id.
 
-    $parti[0] → il nome della risorsa ("paesi" o "viaggi")
-    $parti[1] → l'id (presente solo per PUT e DELETE)
+    $parts[0] → the resource name ("countries" or "trips")
+    $parts[1] → the id (present only for PUT and DELETE)
 
-    l'operatore "??" (null coalescing) restituisce il valore a sinistra
-    se esiste e non è null, altrimenti restituisce il valore a destra.
-    quindi: se $parti[0] non esiste, $risorsa vale null.
+    the "??" (null coalescing) operator returns the left-hand value
+    if it exists and is not null, otherwise it returns the right-hand value.
+    so: if $parts[0] does not exist, $resource is null.
 */
-$risorsa = $parti[0] ?? null;
-$id      = isset($parti[1]) ? (int)$parti[1] : null;
+$resource = $parts[0] ?? null;
+$id = isset($parts[1]) ? (int) $parts[1] : null;
 
 /*
-    router: in base alla risorsa e al metodo HTTP chiamo la funzione giusta.
+    router: based on the resource name i require the correct route file.
 
-    uso "if/elseif" per confrontare la risorsa,
-    e un secondo "if" annidato per distinguere tra
-    operazioni sull'intera collezione (senza id) e sul singolo elemento (con id).
+    the route files can read $method, $parts, $id, and $pdo
+    because they are included in this same scope.
 */
+if ($resource === 'countries') {
+    require __DIR__ . '/routes/countries.php';
 
-if ($risorsa === 'paesi') {
-
-    if ($id === null) {
-        if ($metodo === 'GET')  getAllPaesi($pdo);
-        if ($metodo === 'POST') createPaese($pdo);
-    } else {
-        if ($metodo === 'PUT')    updatePaese($pdo, $id);
-        if ($metodo === 'DELETE') deletePaese($pdo, $id);
-    }
-
-} elseif ($risorsa === 'viaggi') {
-
-    if ($id === null) {
-        if ($metodo === 'GET') {
-            /*
-                se la query string contiene almeno un parametro (es: ?paese_id=2),
-                "$_GET" non sarà vuoto e uso la funzione con i filtri.
-                altrimenti restituisco tutti i viaggi senza filtri.
-            */
-            if (!empty($_GET)) {
-                getViaggiFiltered($pdo);
-            } else {
-                getAllViaggi($pdo);
-            }
-        }
-        if ($metodo === 'POST') createViaggio($pdo);
-    } else {
-        if ($metodo === 'PUT')    updateViaggio($pdo, $id);
-        if ($metodo === 'DELETE') deleteViaggio($pdo, $id);
-    }
+} elseif ($resource === 'trips') {
+    require __DIR__ . '/routes/trips.php';
 
 } else {
-    rispondiJson(['errore' => 'Risorsa non trovata.'], 404);
+    sendJson(['error' => 'Resource not found.'], 404);
 }
