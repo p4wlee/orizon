@@ -1,93 +1,92 @@
 <?php
 /*
-    questo file ha un solo scopo: aprire la connessione al database
-    e renderla disponibile al resto del progetto.
+    this file has one single purpose: open the database connection
+    and make it available to the rest of the project.
 
-    in PHP ogni variabile inizia con il simbolo "$".
-    è una regola sintattica obbligatoria: $nome, $id, $pdo, ecc.
-    il nome della variabile lo scelgo io, il "$" è fisso.
+    in PHP every variable starts with the "$" symbol.
+    it is a mandatory syntax rule: $name, $id, $pdo, etc.
+    the variable name is chosen by me, the "$" is fixed.
 */
 
 /*
-    lettura del file .env :
+    reading the .env file:
 
-    invece di scrivere le credenziali del database direttamente qui,
-    le leggo dal file .env che si trova nella root del progetto.
+    instead of writing the database credentials directly here,
+    i read them from the .env file located in the project root.
 
-    "file()" legge il file riga per riga e restituisce un array.
-    le due opzioni eliminano automaticamente le righe vuote
-    e i caratteri di fine riga (\n) da ogni elemento dell'array.
+    "file()" reads the file line by line and returns an array.
+    the two options automatically strip empty lines
+    and end-of-line characters (\n) from each element of the array.
 
-    "__DIR__" è il percorso assoluto della cartella di questo file (config/).
-    "/../.env" risale di un livello (alla root del progetto) e cerca .env.
-    quindi il percorso completo diventa: /percorso/progetto/orizon/.env
+    "__DIR__" is the absolute path of the folder containing this file (config/).
+    "/../.env" goes up one level (to the project root) and looks for .env.
+    so the full path becomes: /path/to/project/orizon/.env
 */
-$righeEnv = file(__DIR__ . '/../.env', FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+$envLines = file(__DIR__ . '/../.env', FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
 
 /*
-    scorro ogni riga del file .env.
-    ogni riga ha il formato: CHIAVE=valore
-    esempio: DB_USER=root
+    i loop through each line of the .env file.
+    each line has the format: KEY=value
+    example: DB_USER=root
 
-    "strpos($riga, '#') === 0" controlla se la riga inizia con "#".
-    le righe che iniziano con "#" sono commenti e le salto con "continue".
+    "strpos($line, '#') === 0" checks if the line starts with "#".
+    lines starting with "#" are comments and are skipped with "continue".
 
-    "explode('=', $riga, 2)" divide la riga in due parti usando "=" come separatore.
-    il "2" indica il numero massimo di parti: anche se il valore contenesse
-    un "=" (es: una password come "abc=123"), verrebbe diviso solo al primo "=".
-    risultato: ['DB_USER', 'root']
+    "explode('=', $line, 2)" splits the line into two parts using "=" as separator.
+    the "2" is the maximum number of parts: even if the value contained
+    a "=" (e.g. a password like "abc=123"), it would only split at the first "=".
+    result: ['DB_USER', 'root']
 
-    poi definisco una costante PHP con il nome della chiave e il suo valore.
-    "trim()" rimuove eventuali spazi prima e dopo la stringa.
+    i then define a PHP constant with the key name and its value.
+    "trim()" removes any leading and trailing whitespace from the string.
 */
-foreach ($righeEnv as $riga) {
-    if (strpos($riga, '#') === 0) continue;
-    [$chiave, $valore] = explode('=', $riga, 2);
-    define(trim($chiave), trim($valore));
+foreach ($envLines as $line) {
+    if (strpos($line, '#') === 0) continue;
+    [$key, $value] = explode('=', $line, 2);
+    define(trim($key), trim($value));
 }
 
 
 /*
-    funzione: getConnection()
+    function: getConnection()
 
-    questa funzione apre la connessione al database e la restituisce
-    con "return", cioè la "consegna" a chi ha chiamato la funzione.
+    this function opens the database connection and returns it
+    with "return", meaning it "hands it" to whoever called the function.
 
-    uso PDO (PHP Data Objects) per connettermi a MySQL.
-    PDO è una classe PHP che gestisce la connessione al database.
-    il motivo per cui scelgo PDO e non altri metodi è che supporta
-    i "prepared statement", che proteggono dalle SQL injection
-    (questa parte la spiego in dettaglio dentro routes/paesi.php).
+    i use PDO (PHP Data Objects) to connect to MySQL.
+    PDO is a PHP class that manages the database connection.
+    the reason i choose PDO over other methods is that it supports
+    "prepared statements", which protect against SQL injection
+    (i explain this in detail inside controllers/CountryController.php).
 */
-function getConnection() {
+function getConnection(): PDO {
 
     /*
-        il DSN (Data Source Name) è una stringa che dice a PDO
-        dove si trova il database e con quale charset comunicare.
-        il charset "utf8mb4" supporta tutti i caratteri, incluse le lettere accentate.
+        the DSN (Data Source Name) is a string that tells PDO
+        where the database is and which charset to use for communication.
+        the charset "utf8mb4" supports all characters, including accented letters.
     */
     $dsn = 'mysql:host=' . DB_HOST . ';dbname=' . DB_NAME . ';charset=utf8mb4';
 
     /*
-        PDOException è il tipo di errore che PDO lancia in caso di problemi.
-        la variabile "$e" (sta per "exception", cioè eccezione/errore)
-        contiene le informazioni sull'errore.
+        PDOException is the type of error PDO throws when something goes wrong.
+        the variable "$e" (short for "exception") contains the error details.
     */
     try {
         /*
-            "new PDO(...)" crea un nuovo oggetto di connessione.
-            "new" è la parola chiave PHP per creare un'istanza di una classe.
-            
-            l'array che passo come terzo argomento contiene le opzioni:
-            - ERRMODE_EXCEPTION: se c'è un errore SQL, PHP lancia un'eccezione
-              invece di ignorarlo silenziosamente.
-            - FETCH_ASSOC: quando leggo righe dal database, le ricevo come
-              array associativi, cioè con i nomi delle colonne come chiavi.
-              esempio: ['id' => 1, 'nome' => 'Italia']
-              invece di: [0 => 1, 1 => 'Italia']
+            "new PDO(...)" creates a new connection object.
+            "new" is the PHP keyword to instantiate a class.
+
+            the array passed as the third argument contains the options:
+            - ERRMODE_EXCEPTION: if there is a SQL error, PHP throws an exception
+              instead of silently ignoring it.
+            - FETCH_ASSOC: when i read rows from the database, i receive them as
+              associative arrays, meaning column names are used as keys.
+              example: ['id' => 1, 'name' => 'Italy']
+              instead of: [0 => 1, 1 => 'Italy']
         */
         $pdo = new PDO($dsn, DB_USER, DB_PASS, [
-            PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
+            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
         ]);
 
@@ -95,13 +94,13 @@ function getConnection() {
 
     } catch (PDOException $e) {
         /*
-            se la connessione fallisce, rispondo con uno status HTTP 500
-            (Internal Server Error) e un messaggio JSON.
-            poi "exit" ferma completamente l'esecuzione di PHP:
-            non ha senso continuare se non c'è il database.
+            if the connection fails, i respond with HTTP status 500
+            (Internal Server Error) and a JSON message.
+            then "exit" stops PHP execution entirely:
+            there is no point continuing if there is no database.
         */
         http_response_code(500);
-        echo json_encode(['errore' => 'Connessione al database fallita.']);
+        echo json_encode(['error' => 'Database connection failed.']);
         exit;
     }
 }

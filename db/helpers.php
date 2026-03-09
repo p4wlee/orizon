@@ -1,69 +1,69 @@
 <?php
 /*
-    questo file contiene funzioni di supporto che uso in più punti del progetto.
-    invece di riscrivere lo stesso codice ogni volta, lo metto in una funzione
-    e la chiamo quando serve.
+    this file contains utility functions used in multiple parts of the project.
+    instead of rewriting the same code every time, i put it in a function
+    and call it whenever needed.
 */
 
 /*
-    funzione: rispondiJson($dati, $statusCode)
+    function: sendJson($data, $statusCode)
 
-    questa funzione fa tre cose:
-    1. imposta l'header HTTP "Content-Type: application/json",
-       che dice al client (Postman, browser, app) che la risposta è in formato JSON.
-    2. imposta il codice di stato HTTP (es: 200, 201, 404...).
-    3. converte l'array PHP in una stringa JSON e la stampa.
+    this function does three things:
+    1. sets the HTTP header "Content-Type: application/json",
+       which tells the client (Postman, browser, app) that the response is in JSON format.
+    2. sets the HTTP status code (e.g. 200, 201, 404...).
+    3. converts the PHP array to a JSON string and prints it.
 
-    parametri:
-    - $dati:       l'array PHP che voglio restituire come risposta.
-    - $statusCode: il codice HTTP da usare. il valore di default è 200,
-                   quindi se non lo passo, usa 200 automaticamente.
+    parameters:
+    - $data:       the PHP array i want to return as a response.
+    - $statusCode: the HTTP code to use. the default value is 200,
+                   so if i don't pass it, it automatically uses 200.
 
-    i codici HTTP più usati in questo progetto:
-    200: ok, richiesta riuscita
-    201: created, risorsa creata con successo
-    404: not found, la risorsa cercata non esiste
-    422: unprocessable entity, i dati inviati non sono validi
-    500: internal server error, errore del server
+    the most common HTTP codes used in this project:
+    200: ok, request succeeded
+    201: created, resource successfully created
+    404: not found, the requested resource does not exist
+    422: unprocessable entity, the submitted data is not valid
+    500: internal server error, a server-side error occurred
 */
-function rispondiJson($dati, $statusCode = 200) {
+function sendJson(mixed $data, int $statusCode = 200): void {
     header('Content-Type: application/json');
     http_response_code($statusCode);
 
     /*
-        "json_encode()" converte un array PHP in una stringa JSON.
-        esempio: ['id' => 1, 'nome' => 'Italia'] diventa {"id":1,"nome":"Italia"}
-        è necessario perché HTTP trasporta testo, non strutture PHP.
+        "json_encode()" converts a PHP array to a JSON string.
+        example: ['id' => 1, 'name' => 'Italy'] becomes {"id":1,"name":"Italy"}
+        this is necessary because HTTP transports text, not PHP structures.
     */
-    echo json_encode($dati);
+    echo json_encode($data);
     exit;
 }
 
 
 /*
-    funzione: leggiInputJson()
+    function: readJsonInput()
 
-    quando il client invia una richiesta POST o PUT,
-    il corpo (body) della richiesta contiene un JSON.
-    PHP non lo legge automaticamente come fa con i normali form HTML:
-    devo leggerlo manualmente da "php://input",
-    che è uno stream speciale dove PHP riceve il corpo grezzo della richiesta.
+    when the client sends a POST or PUT request,
+    the request body contains a JSON payload.
+    PHP does not read it automatically like it does with regular HTML forms:
+    i have to read it manually from "php://input",
+    which is a special stream where PHP receives the raw request body.
 
-    questa funzione:
-    1. legge il corpo grezzo della richiesta.
-    2. lo converte da stringa JSON ad array PHP con "json_decode()".
-    3. lo restituisce.
+    this function:
+    1. reads the raw request body.
+    2. converts it from a JSON string to a PHP array using "json_decode()".
+    3. returns it.
 
-    "json_decode($stringa, true)" converte la stringa JSON in un array associativo.
-    il "true" è necessario: senza di esso, json_decode restituirebbe un oggetto PHP,
-    non un array, e non potrei accedere ai valori con la sintassi $dati['nome'].
+    "json_decode($string, true)" converts the JSON string into an associative array.
+    the "true" argument is required: without it, json_decode would return a PHP object,
+    not an array, and i could not access values with the $data['name'] syntax.
 
-    "?? []" significa: se json_decode restituisce null (JSON malformato o body vuoto),
-    uso un array vuoto come valore di default.
-    l'operatore "??" si chiama "null coalescing": restituisce il valore a sinistra
-    se non è null, altrimenti restituisce il valore a destra.
+    "?? []" means: if json_decode returns null (malformed JSON or empty body),
+    use an empty array as the default value.
+    the "??" operator is called "null coalescing": it returns the left-hand value
+    if it is not null, otherwise it returns the right-hand value.
 */
-function leggiInputJson() {
-    $dati = json_decode(file_get_contents('php://input'), true);
-    return $dati ?? [];
+function readJsonInput(): array {
+    $data = json_decode(file_get_contents('php://input'), true);
+    return $data ?? [];
 }
